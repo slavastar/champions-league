@@ -360,9 +360,9 @@ const SFX={
 let AUNL=false;
 const unlockAudio=()=>{if(MUTED)return;try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
   if(!AUNL){AUNL=true;try{const el=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=');el.play().catch(()=>{})}catch(e){}}
-  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running')AC.resume()}catch(e){}};
+  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running'){AC.resume();const b=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=b;src.connect(AC.destination);src.start(0)}}catch(e){}};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')AC.resume().catch(()=>{})});
-['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,unlockAudio,true));
+['pointerdown','mousedown','mouseup','click','keydown','keyup','touchstart','touchend'].forEach(ev=>document.addEventListener(ev,unlockAudio,true));
 function sfx(n){if(MUTED)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running'){AC.resume().then(()=>{try{SFX[n]()}catch(e){}});return}SFX[n]()}catch(e){}}
 
 function newGame(){if(S&&S.auto)clearInterval(S.auto);buildT();S={phase:'pick',me:null,groups:null,results:[],md:0,lots:T.map(()=>Math.random()),ko:{idx:null,leg:0,rounds:[]},active:FMT.key==='ucl'?uclSeason():new Set(T.map(t=>t.id)),live:null,out:false,champion:null,po:{},poMark:{},poQueue:[]};render()}
