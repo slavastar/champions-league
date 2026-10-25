@@ -220,21 +220,30 @@ svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-l
 .btl b{flex:1;font-weight:600}.btl.w{color:var(--fg)}.btl.me{color:var(--ac)}
 .btl span{min-width:14px;text-align:right}
 .btl i.hw{font:600 8px 'JetBrains Mono',monospace;font-style:normal;letter-spacing:.1em;border:1px solid var(--ln);border-radius:4px;padding:1px 4px;color:var(--mu)}
+.srch{display:flex;gap:10px;align-items:center;max-width:620px;margin:0 0 12px}
+.search{flex:1;background:transparent;border:1px solid rgba(242,240,233,.16);border-radius:999px;padding:13px 18px;color:var(--fg);font:500 14px Inter,system-ui,sans-serif;outline:none;transition:border-color .15s}
+.search:focus{border-color:var(--ac)}.search::placeholder{color:var(--mu)}
+.qres{display:flex;flex-direction:column;gap:6px;max-width:620px;margin:0 0 18px}
+.qadd{text-align:left;border:1px dashed rgba(242,240,233,.2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg);transition:border-color .15s}
+.qadd:hover{border-color:var(--ac)}.qadd b{font-family:'JetBrains Mono',monospace;margin-right:4px}.qadd span{display:block;color:var(--mu);font-size:11px;margin-top:3px}
 </style>
 </head>
 <body>
 <header><div class="brand"><i></i>CHAMPIONS <span>/ rock paper scissors</span></div><div class="hdr-r"><div class="steps" id="steps"></div><button class="snd" id="snd" data-act="mute">Sound on</button></div></header>
 <main id="app"></main>
 <script>
-const RAW=[
-['Real Madrid','RMA','ESP'],['Barcelona','BAR','ESP'],['Bayern München','BAY','GER'],['Manchester City','MCI','ENG'],['Liverpool','LIV','ENG'],['Paris Saint-Germain','PSG','FRA'],['Juventus','JUV','ITA'],['Inter','INT','ITA'],
-['Atlético Madrid','ATM','ESP'],['Borussia Dortmund','BVB','GER'],['Chelsea','CHE','ENG'],['Manchester United','MUN','ENG'],['AC Milan','MIL','ITA'],['Arsenal','ARS','ENG'],['Porto','POR','POR'],['Benfica','BEN','POR'],
-['Ajax','AJA','NED'],['Napoli','NAP','ITA'],['Tottenham','TOT','ENG'],['RB Leipzig','RBL','GER'],['Sevilla','SEV','ESP'],['Leverkusen','B04','GER'],['Shakhtar','SHA','UKR'],['Roma','ROM','ITA'],
-['Celtic','CEL','SCO'],['Galatasaray','GAL','TUR'],['Club Brugge','BRU','BEL'],['Salzburg','SAL','AUT'],['PSV','PSV','NED'],['Olympiacos','OLY','GRE'],['Dinamo Zagreb','DZG','CRO'],['Copenhagen','FCK','DEN'],
-['Feyenoord','FEY','NED'],['Sporting CP','SCP','POR'],['Anderlecht','AND','BEL'],['Rangers','RAN','SCO'],['Fenerbahçe','FEN','TUR'],['Red Star Belgrade','CZV','SRB'],['Young Boys','YBO','SUI'],['Slavia Prague','SLA','CZE'],
-['Ferencváros','FTC','HUN'],['Legia Warsaw','LEG','POL'],['Dynamo Kyiv','DYN','UKR'],['Malmö','MAL','SWE'],['Bodø/Glimt','BOD','NOR'],['PAOK','PAO','GRE'],['Ludogorets','LUD','BUL'],['Qarabağ','QAR','AZE']];
-const UCL_T=RAW.map(([name,code,country],id)=>({id,name,code,country,pot:Math.min(3,Math.floor(id/8))}));
+const RAW=[["Barcelona", "BAR", "ESP", 0.995], ["Real Madrid", "RMA", "ESP", 0.995], ["Bayern", "BAY", "GER", 0.995], ["PSG", "PSG", "FRA", 0.995], ["Man City", "MCI", "ENG", 0.995], ["Juventus", "JUV", "ITA", 0.9], ["Liverpool", "LIV", "ENG", 0.9], ["Arsenal", "ARS", "ENG", 0.9], ["Inter", "INT", "ITA", 0.9], ["Atlético Madrid", "ATM", "ESP", 0.9], ["Porto", "POR", "POR", 0.7], ["Man United", "MUN", "ENG", 0.7], ["Benfica", "BEN", "POR", 0.7], ["Dortmund", "BVB", "GER", 0.7], ["Napoli", "NAP", "ITA", 0.5], ["Milan", "MIL", "ITA", 0.5], ["Roma", "ROM", "ITA", 0.5], ["Leverkusen", "B04", "GER", 0.5], ["RB Leipzig", "RBL", "GER", 0.5], ["Tottenham", "TOT", "ENG", 0.5], ["Chelsea", "CHE", "ENG", 0.4], ["Atalanta", "ATA", "ITA", 0.4], ["Ajax", "AJA", "NED", 0.4], ["PSV", "PSV", "NED", 0.4], ["Sporting CP", "SCP", "POR", 0.4], ["Aston Villa", "AVL", "ENG", 0.4], ["Newcastle", "NEW", "ENG", 0.4], ["Feyenoord", "FEY", "NED", 0.4], ["Lille", "LIL", "FRA", 0.4], ["Monaco", "MON", "FRA", 0.4], ["Sevilla", "SEV", "ESP", 0.3], ["Villarreal", "VIL", "ESP", 0.3], ["Real Sociedad", "RSO", "ESP", 0.3], ["Athletic Club", "ATH", "ESP", 0.3], ["Lazio", "LAZ", "ITA", 0.3], ["Marseille", "OLM", "FRA", 0.3], ["Lyon", "LYO", "FRA", 0.3], ["Shakhtar", "SHA", "UKR", 0.3], ["Celtic", "CEL", "SCO", 0.3], ["Club Brugge", "BRU", "BEL", 0.3], ["Salzburg", "SAL", "AUT", 0.3], ["Galatasaray", "GAL", "TUR", 0.3], ["Eintracht Frankfurt", "SGE", "GER", 0.3], ["Stuttgart", "VFB", "GER", 0.3], ["Red Star Belgrade", "CZV", "SRB", 0.3], ["Real Betis", "BET", "ESP", 0.2], ["Girona", "GIR", "ESP", 0.2], ["Fiorentina", "FIO", "ITA", 0.2], ["Bologna", "BOL", "ITA", 0.2], ["Brighton", "BHA", "ENG", 0.2], ["West Ham", "WHU", "ENG", 0.2], ["Wolfsburg", "WOB", "GER", 0.2], ["Union Berlin", "FCU", "GER", 0.2], ["Gladbach", "BMG", "GER", 0.2], ["Nice", "NIC", "FRA", 0.2], ["Lens", "RCL", "FRA", 0.2], ["Rennes", "REN", "FRA", 0.2], ["Braga", "SCB", "POR", 0.2], ["AZ Alkmaar", "AZA", "NED", 0.2], ["Fenerbahçe", "FEN", "TUR", 0.2], ["Beşiktaş", "BJK", "TUR", 0.2], ["Olympiacos", "OLY", "GRE", 0.2], ["Dinamo Zagreb", "DZG", "CRO", 0.2], ["Young Boys", "YBO", "SUI", 0.2], ["Copenhagen", "FCK", "DEN", 0.2], ["Rangers", "RAN", "SCO", 0.2], ["Anderlecht", "AND", "BEL", 0.2], ["Union SG", "USG", "BEL", 0.2], ["Dynamo Kyiv", "DYN", "UKR", 0.2], ["Slavia Prague", "SLA", "CZE", 0.2], ["Sparta Prague", "SPA", "CZE", 0.12], ["Ferencváros", "FTC", "HUN", 0.12], ["Legia Warsaw", "LEG", "POL", 0.12], ["Malmö", "MAL", "SWE", 0.12], ["Bodø/Glimt", "BOD", "NOR", 0.12], ["PAOK", "PAO", "GRE", 0.12], ["Ludogorets", "LUD", "BUL", 0.12], ["Qarabağ", "QAR", "AZE", 0.12], ["Basel", "BAS", "SUI", 0.12], ["Midtjylland", "FCM", "DEN", 0.12], ["Sturm Graz", "STU", "AUT", 0.12], ["Viktoria Plzeň", "PLZ", "CZE", 0.12], ["Genk", "GNK", "BEL", 0.12], ["Twente", "TWE", "NED", 0.12], ["Panathinaikos", "PAN", "GRE", 0.12], ["AEK Athens", "AEK", "GRE", 0.12], ["Trabzonspor", "TRA", "TUR", 0.12], ["Hajduk Split", "HAJ", "CRO", 0.12], ["Partizan", "PAR", "SRB", 0.12], ["FCSB", "FCS", "ROU", 0.12], ["CFR Cluj", "CFR", "ROU", 0.12], ["Maccabi Tel Aviv", "MTA", "ISR", 0.12], ["APOEL", "APO", "CYP", 0.12], ["Slovan Bratislava", "SLO", "SVK", 0.12], ["Olimpija Ljubljana", "OLI", "SVN", 0.12], ["Sheriff Tiraspol", "SHE", "MDA", 0.12], ["Molde", "MOL", "NOR", 0.12], ["Rapid Wien", "RAP", "AUT", 0.12], ["Brøndby", "BIF", "DEN", 0.12], ["Torino", "TOR", "ITA", 0.12]];
+const PFIX=RAW.filter(r=>r[3]>=.5).reduce((a,r)=>a+r[3],0),PF=(32-PFIX)/RAW.filter(r=>r[3]<.5).reduce((a,r)=>a+r[3],0);
+const UCL_T=RAW.map(([name,code,country,raw],id)=>({id,name,code,country,pi:raw>=.5?raw:raw*PF,pot:-1}));
 let T=UCL_T;
+function assignPots(set){UCL_T.forEach(t=>t.pot=-1);shuffle([...set]).sort((a,b)=>UCL_T[b].pi-UCL_T[a].pi).forEach((id,i)=>UCL_T[id].pot=Math.floor(i/8))}
+function uclSeason(){const u=Math.random(),pts=x=>x<u?0:Math.floor(x-u)+1,sel=new Set();let c=0;
+  for(const id of shuffle(UCL_T.map(t=>t.id))){const a=c;c+=UCL_T[id].pi;if(pts(c)>pts(a))sel.add(id)}
+  const byPi=UCL_T.slice().sort((a,b)=>b.pi-a.pi);
+  while(sel.size<32){const t=byPi.find(t=>!sel.has(t.id));sel.add(t.id)}
+  while(sel.size>32){const t=byPi.slice().reverse().find(t=>sel.has(t.id));sel.delete(t.id)}
+  assignPots(sel);return sel}
+
 const FLAG={ESP:'🇪🇸',GER:'🇩🇪',ENG:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',FRA:'🇫🇷',ITA:'🇮🇹',POR:'🇵🇹',NED:'🇳🇱',UKR:'🇺🇦',SCO:'🏴󠁧󠁢󠁳󠁣󠁴󠁿',TUR:'🇹🇷',BEL:'🇧🇪',AUT:'🇦🇹',GRE:'🇬🇷',CRO:'🇭🇷',DEN:'🇩🇰',SRB:'🇷🇸',SUI:'🇨🇭',CZE:'🇨🇿',HUN:'🇭🇺',POL:'🇵🇱',SWE:'🇸🇪',NOR:'🇳🇴',BUL:'🇧🇬',AZE:'🇦🇿'};
 const fl=id=>`<span class="fl">${FLAG[T[id].country]||isoFlag(T[id].country)}</span>`;
 const GL='ABCDEFGHIJKL';
@@ -253,7 +262,7 @@ const WC26=[
  [['Croatia','CRO','UEFA'],['Morocco','MAR','CAF'],['Colombia','COL','CONMEBOL'],['Uruguay','URU','CONMEBOL'],['Switzerland','SUI','UEFA'],['Japan','JPN','AFC'],['Senegal','SEN','CAF'],['Iran','IRN','AFC'],['South Korea','KOR','AFC'],['Ecuador','ECU','CONMEBOL'],['Austria','AUT','UEFA'],['Australia','AUS','AFC']],
  [['Norway','NOR','UEFA'],['Panama','PAN','CONCACAF'],['Egypt','EGY','CAF'],['Algeria','ALG','CAF'],['Scotland','SCO','UEFA'],['Paraguay','PAR','CONMEBOL'],['Tunisia','TUN','CAF'],['Ivory Coast','CIV','CAF'],['Uzbekistan','UZB','AFC'],['Qatar','QAT','AFC'],['Saudi Arabia','KSA','AFC'],['South Africa','RSA','CAF']],
  [['Jordan','JOR','AFC'],['Cape Verde','CPV','CAF'],['Ghana','GHA','CAF'],['Curaçao','CUW','CONCACAF'],['Haiti','HAI','CONCACAF'],['New Zealand','NZL','OFC'],['Bosnia & Herzegovina','BIH','UEFA'],['Sweden','SWE','UEFA'],['Türkiye','TUR','UEFA'],['Czechia','CZE','UEFA'],['DR Congo','COD','CAF'],['Iraq','IRQ','AFC']]];
-const ISO={QAT:'QA',BRA:'BR',BEL:'BE',FRA:'FR',ARG:'AR',ESP:'ES',POR:'PT',MEX:'MX',NED:'NL',DEN:'DK',GER:'DE',URU:'UY',SUI:'CH',USA:'US',CRO:'HR',SEN:'SN',IRN:'IR',JPN:'JP',MAR:'MA',SRB:'RS',POL:'PL',KOR:'KR',TUN:'TN',CMR:'CM',CAN:'CA',ECU:'EC',KSA:'SA',GHA:'GH',CRC:'CR',AUS:'AU',COL:'CO',AUT:'AT',NOR:'NO',PAN:'PA',EGY:'EG',ALG:'DZ',PAR:'PY',CIV:'CI',UZB:'UZ',RSA:'ZA',JOR:'JO',CPV:'CV',CUW:'CW',HAI:'HT',NZL:'NZ',BIH:'BA',SWE:'SE',TUR:'TR',CZE:'CZ',COD:'CD',IRQ:'IQ'};
+const ISO={ROU:'RO',ISR:'IL',CYP:'CY',SVK:'SK',SVN:'SI',MDA:'MD',HUN:'HU',SRB:'RS',SUI:'CH',CZE:'CZ',POL:'PL',SWE:'SE',NOR:'NO',BUL:'BG',AZE:'AZ',UKR:'UA',GRE:'GR',CRO:'HR',DEN:'DK',AUT:'AT',TUR:'TR',BEL:'BE',NED:'NL',QAT:'QA',BRA:'BR',BEL:'BE',FRA:'FR',ARG:'AR',ESP:'ES',POR:'PT',MEX:'MX',NED:'NL',DEN:'DK',GER:'DE',URU:'UY',SUI:'CH',USA:'US',CRO:'HR',SEN:'SN',IRN:'IR',JPN:'JP',MAR:'MA',SRB:'RS',POL:'PL',KOR:'KR',TUN:'TN',CMR:'CM',CAN:'CA',ECU:'EC',KSA:'SA',GHA:'GH',CRC:'CR',AUS:'AU',COL:'CO',AUT:'AT',NOR:'NO',PAN:'PA',EGY:'EG',ALG:'DZ',PAR:'PY',CIV:'CI',UZB:'UZ',RSA:'ZA',JOR:'JO',CPV:'CV',CUW:'CW',HAI:'HT',NZL:'NZ',BIH:'BA',SWE:'SE',TUR:'TR',CZE:'CZ',COD:'CD',IRQ:'IQ'};
 const isoFlag=c=>ISO[c]?String.fromCodePoint(...[...ISO[c]].map(ch=>0x1F1E6+ch.charCodeAt(0)-65)):c==='WAL'?'🏴󠁧󠁢󠁷󠁬󠁳󠁿':'';
 const FMTS={
   ucl:{key:'ucl',short:'Champions League',title:'Old-format Champions League',unit:'club',G:8,mds:6,sched:SCHED,rounds:ROUNDS,lead:'32 clubs, 8 groups, 6 matchdays, then two-legged knockouts up to a one-off final.'},
@@ -340,7 +349,7 @@ const unlockAudio=()=>{if(MUTED)return;try{AC=AC||new(window.AudioContext||windo
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,unlockAudio,true));
 function sfx(n){if(MUTED)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running'){AC.resume().then(()=>{try{SFX[n]()}catch(e){}});return}SFX[n]()}catch(e){}}
 
-function newGame(){if(S&&S.auto)clearInterval(S.auto);buildT();S={phase:'pick',me:null,groups:null,results:[],md:0,lots:T.map(()=>Math.random()),ko:{idx:null,leg:0,rounds:[]},active:FMT.key==='ucl'?new Set([...Array(24).keys(),...shuffle(Array.from({length:T.length-24},(_,i)=>24+i)).slice(0,8)]):new Set(T.map(t=>t.id)),live:null,out:false,champion:null,po:{},poMark:{},poQueue:[]};render()}
+function newGame(){if(S&&S.auto)clearInterval(S.auto);buildT();S={phase:'pick',me:null,groups:null,results:[],md:0,lots:T.map(()=>Math.random()),ko:{idx:null,leg:0,rounds:[]},active:FMT.key==='ucl'?uclSeason():new Set(T.map(t=>t.id)),live:null,out:false,champion:null,po:{},poMark:{},poQueue:[]};render()}
 
 function drawGroups(){
   const G=FMT.G;
@@ -441,6 +450,7 @@ const A={
   setForm(f){FORM=f;try{localStorage.setItem('rps-form',f)}catch(e){}render()},
   kickoff(){const L=S.live;if(!L||L.started)return;L.form=FORM.split('-').map(Number);L.oform=FORMS[Math.random()*FORMS.length|0].split('-').map(Number);L.started=true;render()},
   setFmt(k){FMT=FMTS[k]||FMTS.ucl;try{localStorage.setItem('rps-fmt',FMT.key)}catch(e){}newGame()},
+  addClub(id){id=+id;if(!S.active.has(id)){let low=null;for(const a of S.active){if(a===S.me)continue;if(low==null||T[a].pi<T[low].pi)low=a}S.active.delete(low);S.active.add(id);assignPots(S.active)}S.me=id;render()},
   setMode(m){MODE=m;try{localStorage.setItem('rps-mode',m)}catch(e){}render()},
   cont(){
     const L=S.live;
@@ -586,6 +596,11 @@ document.addEventListener('touchstart',e=>{if(FZ.g&&e.target===FZ.cv){e.preventD
 document.addEventListener('touchmove',e=>{if(FZ.g&&e.target===FZ.cv){e.preventDefault();FZ.setY(e.touches[0].clientY)}},{passive:false});
 document.addEventListener('keyup',e=>{if(FZ.g)delete FZ.g.keys[e.key.toLowerCase()]});
 
+function applySearch(){const q=document.getElementById('q');if(!q)return;const v=(S.q||'').trim().toLowerCase();
+  document.querySelectorAll('.club[data-n]').forEach(b=>b.style.display=!v||b.dataset.n.includes(v)?'':'none');
+  const r=document.getElementById('qres');if(!r)return;if(!v||FMT.key!=='ucl'){r.innerHTML='';return}
+  r.innerHTML=T.filter(t=>!S.active.has(t.id)&&t.name.toLowerCase().includes(v)).slice(0,6).map(t=>`<button class="qadd" data-act="addClub" data-arg="${t.id}">${fl(t.id)} <b>${t.code}</b> ${t.name}<span>not in this season's 32 · ${Math.round(t.pi*100)}% chance · bring them in →</span></button>`).join('')}
+document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;applySearch()}});
 /* views */
 const name=id=>`${fl(id)}<b>${$(id).code}</b><span>${$(id).name}</span>`;
 function steps(){
@@ -639,8 +654,8 @@ const V={
     return `<div class="fade"><div class="eyebrow">${FMT.title}</div><h1>Choose your <em>${FMT.unit}.</em></h1>
     <div class="modes" style="margin-right:10px">${Object.values(FMTS).map(f=>`<button class="mode ${FMT.key===f.key?'on':''}" data-act="setFmt" data-arg="${f.key}">${f.short}</button>`).join('')}</div>
     <div class="modes"><button class="mode ${MODE==='rps'?'on':''}" data-act="setMode" data-arg="rps">Rock Paper Scissors</button><button class="mode ${MODE==='pen'?'on':''}" data-act="setMode" data-arg="pen">Penalties</button><button class="mode ${MODE==='foos'?'on':''}" data-act="setMode" data-arg="foos">Table football</button></div>
-    <p class="lead">${FMT.lead} Every match is decided by ${MODE==='pen'?'penalties: you shoot, then you keep, one kick at a time':MODE==='foos'?'table football: real-time, 75 seconds a match, level knockouts go to penalties':'rock, paper, scissors'}.${FMT.key==='ucl'?' Pot 4 is drawn fresh each game from 24 clubs outside the top five leagues.':' The draw follows FIFA rules: hosts pre-placed, at most two UEFA teams per group, other confederations kept apart.'}</p>
-    <div class="pots">${[0,1,2,3].map(p=>`<div class="pot"><div class="eyebrow">Pot ${p+1}</div>${potTeams(p).map(t=>`<button class="club ${S.me===t.id?'sel':''}" data-act="sel" data-arg="${t.id}"><b class="code">${t.code}</b><span>${fl(t.id)} ${t.name}</span></button>`).join('')}</div>`).join('')}</div>
+    <p class="lead">${FMT.lead} Every match is decided by ${MODE==='pen'?'penalties: you shoot, then you keep, one kick at a time':MODE==='foos'?'table football: real-time, 75 seconds a match, level knockouts go to penalties':'rock, paper, scissors'}.${FMT.key==='ucl'?' Each season 32 of 100 European clubs qualify, weighted by pedigree, and pots follow strength.':' The draw follows FIFA rules: hosts pre-placed, at most two UEFA teams per group, other confederations kept apart.'}</p>
+    <div class="srch"><input id="q" class="search" placeholder="Search your ${FMT.unit}…" autocomplete="off" value="${(S.q||'').replace(/"/g,'&quot;')}">${FMT.key==='ucl'?'<button class="ghost" data-act="newGame">Reroll the 32</button>':''}</div><div id="qres" class="qres"></div><div class="pots">${[0,1,2,3].map(p=>`<div class="pot"><div class="eyebrow">Pot ${p+1}</div>${potTeams(p).map(t=>`<button class="club ${S.me===t.id?'sel':''}" data-act="sel" data-arg="${t.id}" data-n="${t.name.toLowerCase()}"><b class="code">${t.code}</b><span>${fl(t.id)} ${t.name}</span></button>`).join('')}</div>`).join('')}</div>
     <button class="cta" data-act="draw" data-primary ${S.me==null?'disabled':''}>Draw the groups →</button></div>`;
   },
   drawing(){
@@ -720,9 +735,10 @@ const V={
     return `<div class="fade"><div class="champ"><div class="ring">${$(S.champion).code}</div><div class="eyebrow">${FMT.wc?'World champions':'Champions of Europe'}</div><h1>${won?`You won <em>it all.</em>`:`${$(S.champion).name}.`}</h1><p class="lead" style="margin:0 auto 30px">Final: ${$(f.a).code} ${f.ga} – ${f.gb} ${$(f.b).code}${f.how?` (${f.how})`:''}</p><div class="actions" style="justify-content:center"><button class="cta" data-act="newGame" data-primary>Play again</button></div></div><div class="eyebrow">Bracket</div>${bracket()}<div class="section"><div class="eyebrow" style="margin-bottom:14px">Final group standings</div>${groupsGrid(null)}</div></div>`;
   }
 };
-function render(){document.getElementById('app').innerHTML=V[S.phase]();document.getElementById('steps').innerHTML=steps();if(S.phase!==render.p){window.scrollTo({top:0});render.p=S.phase}fzAttach()}
+function render(){document.getElementById('app').innerHTML=V[S.phase]();document.getElementById('steps').innerHTML=steps();if(S.phase!==render.p){window.scrollTo({top:0});render.p=S.phase}fzAttach();applySearch()}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;A[b.dataset.act](b.dataset.arg)});
 document.addEventListener('keydown',e=>{
+  if(e.target&&e.target.id==='q'){if(e.key==='Enter'){e.preventDefault();const b=[...document.querySelectorAll('.club[data-n]')].find(b=>b.style.display!=='none');if(b)b.click();else{const a=document.querySelector('.qadd');if(a)a.click()}}return}
   if(FZ.g){const k=e.key.toLowerCase();if(['arrowup','arrowdown','w','s',' '].includes(k)){e.preventDefault();if(k===' ')FZ.kick();else{FZ.g.keys[k]=1;FZ.g.mouseY=null}}return}
   if(S.phase==='match'&&!S.live.done&&(MODE==='pen'||MODE==='foos'&&S.live.so)){const k={'1':'left','2':'centre','3':'right',arrowleft:'left',arrowup:'centre',arrowdown:'centre',arrowright:'right'}[e.key.toLowerCase()];if(k){e.preventDefault();A.kick(k)}}
   else if(S.phase==='match'&&!S.live.done&&MODE==='rps'){const k={'1':'rock','2':'paper','3':'scissors',r:'rock',p:'paper',s:'scissors'}[e.key.toLowerCase()];if(k)A.pick(k)}
