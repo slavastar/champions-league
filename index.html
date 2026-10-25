@@ -226,6 +226,10 @@ svg{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-l
 .qres{display:flex;flex-direction:column;gap:6px;max-width:620px;margin:0 0 18px}
 .qadd{text-align:left;border:1px dashed rgba(242,240,233,.2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--fg);transition:border-color .15s}
 .qadd:hover{border-color:var(--ac)}.qadd b{font-family:'JetBrains Mono',monospace;margin-right:4px}.qadd span{display:block;color:var(--mu);font-size:11px;margin-top:3px}
+.tl{position:relative;height:4px;max-width:420px;margin:10px auto 6px;background:rgba(242,240,233,.1);border-radius:99px}
+.tl i{position:absolute;left:0;top:0;bottom:0;background:var(--ac);border-radius:99px}
+.tl b{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--bg);border:2px solid rgba(242,240,233,.45)}
+.tl b.w{border-color:var(--ac)}.tl b.l{border-color:var(--fg)}
 </style>
 </head>
 <body>
@@ -324,7 +328,7 @@ function penReveal(L,opp){
   return goalHtml(null,'centre',false)+`<div class="pres mu">${penShooterMe(L)?'Your kick':'You\'re in goal'}</div>`;
 }
 function penBottom(L){const me=penShooterMe(L);
-  return `<div class="pmode">${me?'You shoot · stop the marker inside the zone':'You\'re in goal · pick a dive'}</div>${me?`<div class="meter ${L.busy?'off':''}"><b></b><i></i></div>`:''}<div class="picks">${DIRS.map((d,i)=>`<button class="pick" data-act="kick" data-arg="${d}" ${L.busy?'disabled':''}>${ARROW[d]}<span>${me?'Shoot':'Dive'} ${d}</span><kbd>${i+1}</kbd></button>`).join('')}</div>`}
+  return `<div class="pmode">${me?'You shoot · stop the marker inside the zone':'You\'re in goal · pick a dive'}</div>${me?`<div class="meter ${L.busy||waiting(L)?'off':''}"><b></b><i></i></div>`:''}<div class="picks">${DIRS.map((d,i)=>`<button class="pick" data-act="kick" data-arg="${d}" ${L.busy||waiting(L)?'disabled':''}>${ARROW[d]}<span>${me?'Shoot':'Dive'} ${d}</span><kbd>${i+1}</kbd></button>`).join('')}</div>`}
 const CH=['rock','paper','scissors'];
 const BEATS={rock:'scissors',paper:'rock',scissors:'paper'};
 const ICON={rock:'<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="15"/></svg>',paper:'<svg viewBox="0 0 48 48"><rect x="10" y="9" width="28" height="30" rx="3"/><path d="M16 18h16M16 24h16M16 30h10"/></svg>',scissors:'<svg viewBox="0 0 48 48"><circle cx="15" cy="35" r="5"/><circle cx="33" cy="35" r="5"/><path d="M18.5 31.5L34 8M29.5 31.5L14 8"/></svg>'};
@@ -432,16 +436,16 @@ const A={
   mute(){MUTED=!MUTED;try{localStorage.setItem('rps-muted',MUTED?'1':'0')}catch(e){}document.getElementById('snd').textContent=MUTED?'Sound off':'Sound on'},
   playMd(){const f=fixtures(S.md).find(f=>f.h===S.me||f.a===S.me);const n=sampleThrows();S.live={type:'group',fx:f,home:f.h,away:f.a,max:n,mins:kickMinutes(n),throws:[],hg:0,ag:0};S.phase='match';render()},
   pick(c){
-    const L=S.live;if(!L||L.done||L.busy)return;L.busy=true;L.myPick=c;L.last=null;sfx('throw');render();
+    const L=S.live;if(!L||L.done||L.busy||waiting(L))return;L.busy=true;L.myPick=c;L.last=null;sfx('throw');render();
     setTimeout(()=>{
       const meHome=L.home===S.me,opp=meHome?L.away:L.home,op=oppPick(c,S.me,opp,liveH(L)+(L.so?0:momH(streak(L)))),r=duel(c,op),th={me:c,op,r};
       if(L.so){L.soThrows.push(th);if(r){if(L.type==='playoff')r>0?L.hg++:L.ag++;L.tie.winner=r>0?S.me:opp;L.tie.how='shootout';L.tie.so=L.soThrows.length;L.done=true}}
-      else{L.throws.push(th);if(r>0){meHome?L.hg++:L.ag++}else if(r<0){meHome?L.ag++:L.hg++}if(L.throws.length===L.max)finishRegular()}
+      else{L.throws.push(th);if(r>0){meHome?L.hg++:L.ag++}else if(r<0){meHome?L.ag++:L.hg++}if(L.throws.length===L.max)L.ft=1}
       L.last=th;L.busy=false;sfx(r>0?'win':r<0?'loss':'draw');render();
     },520);
   },
   kick(d){
-    const L=S.live;if(!L||L.done||L.busy)return;
+    const L=S.live;if(!L||L.done||L.busy||waiting(L))return;
     const opp=L.home===S.me?L.away:L.home,shoot=penShooterMe(L);let on=Math.random()>.05;
     if(shoot){const b=document.querySelector('.meter:not(.off)'),m=b&&b.querySelector('i');if(m){const rb=b.getBoundingClientRect(),rm=m.getBoundingClientRect();on=Math.abs((rm.left+rm.width/2-rb.left)/rb.width-.5)<=.38}}
     L.busy=true;L.myPick=d;L.last=null;sfx('throw');render();
@@ -450,7 +454,7 @@ const A={
       if(shoot){const kp=penPick(d,pWin(S.me,opp,h));th={kind:'shot',ball:d,keep:kp,miss:!on,r:on&&kp!==d?1:0}}
       else{const aim=penPick(d,pWin(opp,S.me,-h));th={kind:'keep',ball:aim,keep:d,miss:!on,r:on&&aim!==d?-1:0}}
       if(L.so){L.soThrows.push(th);const j=L.soThrows.length;if(j%2===0){const pr=L.soThrows.slice(j-2),mg=pr.some(t=>t.r>0),og=pr.some(t=>t.r<0);if(mg!==og){if(L.type==='playoff')mg?L.hg++:L.ag++;L.tie.winner=mg?S.me:opp;L.tie.how='shootout';L.tie.so=j/2;L.done=true}}}
-      else{L.throws.push(th);if(th.r>0){meHome?L.hg++:L.ag++}else if(th.r<0){meHome?L.ag++:L.hg++}if(L.throws.length===L.max)finishRegular()}
+      else{L.throws.push(th);if(th.r>0){meHome?L.hg++:L.ag++}else if(th.r<0){meHome?L.ag++:L.hg++}if(L.throws.length===L.max)L.ft=1}
       L.last=th;L.busy=false;sfx(th.r>0||(th.kind==='keep'&&!th.r)?'win':th.r<0?'loss':'draw');render();
     },650);
   },
@@ -612,6 +616,18 @@ function venueTxt(L){if(L.type==='playoff')return '';
   if(FMT.wc){if(!L.venue){if(L.type==='ko'&&curRound().short==='F')L.venue=FMT.final;else{const hc=[L.home,L.away].map(id=>$(id).code).find(c=>FMT.hosts[c]!=null),vs=FMT.venues.filter(v=>!hc||v[1]===hc),pool=vs.length?vs:FMT.venues;L.venue=pool[Math.random()*pool.length|0][0]}}return L.venue}
   if(L.type==='ko'&&curRound().legs===1)return 'Neutral venue';
   return (UCL_T[L.home]||{}).st||''}
+const waiting=L=>!!L&&!L.so&&!L.done&&L.type!=='playoff'&&MODE!=='foos'&&!!L.mins&&(L.ft||(L.tmin||0)<L.mins[L.throws.length]);
+const clockTxt=L=>L.done||L.so?'Full time':(L.tmin||0)>0?Math.floor(L.tmin)+"'":'Kick-off';
+const tlHtml=L=>`<div class="tl"><i id="tlf" style="width:${(L.so||L.done?90:(L.tmin||0))/90*100}%"></i>${(L.mins?L.throws.map((t,i)=>`<b class="${t.r>0?'w':t.r<0?'l':''}" style="left:${L.mins[i]/90*100}%"></b>`).join(''):'')}</div>`;
+function tlAttach(){const L=S.live;if(S.phase!=='match'||!L||L.run||L.busy||!waiting(L))return;
+  L.run=true;if(!L.tmin)sfx('whistle');let last=performance.now();
+  const step=ts=>{if(S.live!==L||S.phase!=='match'){L.run=false;return}
+    const dt=Math.max(0,Math.min(100,ts-last));last=ts;const target=L.ft?90:L.mins[L.throws.length];
+    L.tmin=Math.min(target,(L.tmin||0)+dt*.005);
+    const f=document.getElementById('tlf'),c=document.getElementById('tlc');if(f)f.style.width=L.tmin/90*100+'%';if(c)c.textContent=Math.floor(L.tmin)+"'";
+    if(L.tmin>=target){L.run=false;if(L.ft){finishRegular();sfx('whistle')}render();return}
+    requestAnimationFrame(step)};
+  requestAnimationFrame(step)}
 /* views */
 const name=id=>`${fl(id)}<b>${$(id).code}</b><span>${$(id).name}</span>`;
 function steps(){
@@ -703,7 +719,7 @@ const V={
     let reveal;
     if(L.busy)reveal=`<div class="hand mine"><div class="ic pop">${ICON[L.myPick]}</div>You</div><div class="res"><span class="wait" style="display:inline-block"></span></div><div class="hand"><div class="ic"><span class="wait"></span></div>${$(opp).code}</div>`;
     else if(L.last){const r=L.last.r;reveal=`<div class="hand mine"><div class="ic pop">${ICON[L.last.me]}</div>You · ${L.last.me}</div><div class="res ${r>0?'w':r<0?'l':''}">${r>0?'Win':r<0?'Loss':'Draw'}</div><div class="hand"><div class="ic pop">${ICON[L.last.op]}</div>${$(opp).code} · ${L.last.op}</div>`}
-    else reveal=`<div class="hand mine"><div class="ic"></div>You</div><div class="res" style="color:var(--mu);font-size:14px;font-weight:500">Make your move</div><div class="hand"><div class="ic"></div>${$(opp).code}</div>`;
+    else reveal=`<div class="hand mine"><div class="ic"></div>You</div><div class="res" style="color:var(--mu);font-size:14px;font-weight:500">${waiting(L)?'Play on…':'Make your move'}</div><div class="hand"><div class="ic"></div>${$(opp).code}</div>`;
     let bottom;
     if(L.done){
       let v;
@@ -711,10 +727,10 @@ const V={
       else if(L.type==='playoff')v=L.tie.winner===S.me?'<b>Playoff won</b>':'<b>Playoff lost</b>';
       else{const t=L.tie;v=t.winner!=null?(t.winner===S.me?`<b>You go through</b>${t.how?` on ${t.how}`:''}`:`<b>Eliminated</b>${t.how?` on ${t.how}`:''}`):'<b>Full time</b> · 2nd leg to come'}
       bottom=`<div class="verdict">${v}</div><button class="cta" data-act="cont" data-primary>${L.type==='group'?'See all groups →':L.type==='playoff'?'Continue →':'See all results →'}</button>`;
-    }else bottom=`<div class="picks">${CH.map((c,i)=>`<button class="pick" data-act="pick" data-arg="${c}" ${L.busy?'disabled':''}>${ICON[c]}<span>${c[0].toUpperCase()+c.slice(1)}</span><kbd>${i+1}</kbd></button>`).join('')}</div>`;
+    }else bottom=`<div class="picks">${CH.map((c,i)=>`<button class="pick" data-act="pick" data-arg="${c}" ${L.busy||waiting(L)?'disabled':''}>${ICON[c]}<span>${c[0].toUpperCase()+c.slice(1)}</span><kbd>${i+1}</kbd></button>`).join('')}</div>`;
     if(MODE==='foos'&&!L.so){const gs=L.goals||[];reveal=`<div class="pres">Full time</div><div class="fzgoals">${gs.length?gs.map(x=>`<span class="${x.me?'me':''}">${x.m}' ${x.me?'You':$(opp).code}</span>`).join(''):'<span>No goals</span>'}</div>`}
     if(MODE==='pen'||MODE==='foos'&&L.so){reveal=penReveal(L,opp);if(!L.done)bottom=penBottom(L)}
-    const out=`<div class="match fade"><div class="eyebrow">${ctx}</div><div class="board">${side(L.home,true)}<div class="score">${L.hg}<span>–</span>${L.ag}</div>${side(L.away,false)}</div>${L.type!=='playoff'?`<div class="clock">${L.throws.length>=L.max?'Full time':L.throws.length?L.mins[L.throws.length-1]+'\'':'Kick-off'}</div>`:''}<div class="sub">${sub}</div><div class="odds">Pot ${$(S.me).pot+1} vs Pot ${$(opp).pot+1} · ${Math.round(pWin(S.me,opp,liveH(S.live))*100)}–${Math.round(pWin(opp,S.me,-liveH(S.live))*100)}${liveH(S.live)?' · home +5%':''} on decisive throws</div><div class="dots">${dots}</div><div class="reveal">${reveal}</div>${bottom}</div>`;
+    const out=`<div class="match fade"><div class="eyebrow">${ctx}</div><div class="board">${side(L.home,true)}<div class="score">${L.hg}<span>–</span>${L.ag}</div>${side(L.away,false)}</div>${L.type!=='playoff'?`<div class="clock" id="tlc">${clockTxt(L)}</div>${tlHtml(L)}`:''}<div class="sub">${sub}</div><div class="odds">Pot ${$(S.me).pot+1} vs Pot ${$(opp).pot+1} · ${Math.round(pWin(S.me,opp,liveH(S.live))*100)}–${Math.round(pWin(opp,S.me,-liveH(S.live))*100)}${liveH(S.live)?' · home +5%':''} on decisive throws</div><div class="dots">${dots}</div><div class="reveal">${reveal}</div>${bottom}</div>`;
     return (MODE==='pen'||MODE==='foos')?out.replace(/Each throw you win is a goal/g,'Every penalty scored is a goal').replace('on decisive throws','scoring edge').replace('<div class="reveal">','<div class="reveal pen">'):out;
   },
   mdResults(){
@@ -747,7 +763,7 @@ const V={
     return `<div class="fade"><div class="champ"><div class="ring">${$(S.champion).code}</div><div class="eyebrow">${FMT.wc?'World champions':'Champions of Europe'}</div><h1>${won?`You won <em>it all.</em>`:`${$(S.champion).name}.`}</h1><p class="lead" style="margin:0 auto 30px">Final: ${$(f.a).code} ${f.ga} – ${f.gb} ${$(f.b).code}${f.how?` (${f.how})`:''}</p><div class="actions" style="justify-content:center"><button class="cta" data-act="newGame" data-primary>Play again</button></div></div><div class="eyebrow">Bracket</div>${bracket()}<div class="section"><div class="eyebrow" style="margin-bottom:14px">Final group standings</div>${groupsGrid(null)}</div></div>`;
   }
 };
-function render(){document.getElementById('app').innerHTML=V[S.phase]();document.getElementById('steps').innerHTML=steps();if(S.phase!==render.p){window.scrollTo({top:0});render.p=S.phase}fzAttach();applySearch()}
+function render(){document.getElementById('app').innerHTML=V[S.phase]();document.getElementById('steps').innerHTML=steps();if(S.phase!==render.p){window.scrollTo({top:0});render.p=S.phase}fzAttach();applySearch();tlAttach()}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;A[b.dataset.act](b.dataset.arg)});
 document.addEventListener('keydown',e=>{
   if(e.target&&e.target.id==='q'){if(e.key==='Enter'){e.preventDefault();const b=[...document.querySelectorAll('.club[data-n]')].find(b=>b.style.display!=='none');if(b)b.click();else{const a=document.querySelector('.qadd');if(a)a.click()}}return}
