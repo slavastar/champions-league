@@ -313,6 +313,7 @@ const formSvg=f=>{const a=[1,...f.split('-').map(Number)],xs=[7,22,38,53];return
 let RSPD=(()=>{try{const v=+localStorage.getItem('rps-rodspeed');return v>=1&&v<=10?v:5}catch(e){return 5}})();
 const rspdHtml=st=>`<label class="rspd" style="${st||''}">Rod speed <input type="range" id="rspd" min="1" max="10" step="1" value="${RSPD}"><b id="rspdv">${RSPD}</b></label>`;
 document.addEventListener('input',e=>{if(e.target.id==='rspd'){RSPD=+e.target.value;try{localStorage.setItem('rps-rodspeed',RSPD)}catch(_){}const v=document.getElementById('rspdv');if(v)v.textContent=RSPD}});
+let AWAY=(()=>{try{return localStorage.getItem('rps-ag')!=='0'}catch(e){return true}})();
 let MODE=(()=>{try{return localStorage.getItem('rps-mode')||'rps'}catch(e){return 'rps'}})();
 const DIRS=['left','centre','right'];
 const ARROW={left:'<svg viewBox="0 0 48 48"><path d="M29 13 18 24l11 11"/></svg>',centre:'<svg viewBox="0 0 48 48"><path d="M13 29l11-11 11 11"/></svg>',right:'<svg viewBox="0 0 48 48"><path d="M19 13l11 11-11 11"/></svg>'};
@@ -402,7 +403,7 @@ function addLeg(t,hg,ag){const home=legHome(t,t.legs.length);t.legs.push({home,h
 function awayGoals(t){let aa=0,ab=0;for(const l of t.legs){if(l.home===t.a)ab+=l.ag;else aa+=l.ag}return[aa,ab]}
 function resolve(t,rd){
   if(t.ga!==t.gb){t.winner=t.ga>t.gb?t.a:t.b;return true}
-  if(rd.legs===2){const[aa,ab]=awayGoals(t);if(aa!==ab){t.winner=aa>ab?t.a:t.b;t.how='away goals';return true}}
+  if(rd.legs===2&&AWAY){const[aa,ab]=awayGoals(t);if(aa!==ab){t.winner=aa>ab?t.a:t.b;t.how='away goals';return true}}
   return false;
 }
 function simShootout(t){let n=0;for(;;){n++;const r=sDuel(t.a,t.b);if(r){t.winner=r>0?t.a:t.b;t.how='shootout';t.so=n;return}}}
@@ -410,9 +411,12 @@ const rnorm=()=>Math.sqrt(-2*Math.log(1-Math.random()))*Math.cos(2*Math.PI*Math.
 function rgamma(k){const d=k-1/3,c=1/Math.sqrt(9*d);for(;;){let x,v;do{x=rnorm();v=1+c*x}while(v<=0);v=v*v*v;if(Math.log(Math.random())<.5*x*x+d-d*v+d*Math.log(v))return d*v}}
 function rpois(l){const L=Math.exp(-l);let k=0,p=1;do{k++;p*=Math.random()}while(p>L);return k-1}
 const THR_MEAN=4.5,THR_K=6,THR_MAX=12;
-function sampleThrows(){return Math.min(THR_MAX,Math.max(1,rpois(rgamma(THR_K)*THR_MEAN/THR_K)))}
+const P_MIN=1/18;function sampleMins(a=1,b=90){const m=[];for(let i=a;i<=b;i++)if(Math.random()<P_MIN)m.push(i);return m}
+function sampleThrows(){return sampleMins().length}
 function kickMinutes(n){const m=new Set();while(m.size<n)m.add(1+Math.floor(Math.random()*90));return[...m].sort((a,b)=>a-b)}
-function simLeg(t,rd){const hm=legHome(t,t.legs.length),[h,a]=simThrows(sampleThrows(),hm,hm===t.a?t.b:t.a,FMT.wc?hostF(hm,hm===t.a?t.b:t.a):rd.legs===1?0:1);addLeg(t,h,a);if(t.legs.length===rd.legs&&!resolve(t,rd))simShootout(t)}
+function simLeg(t,rd){const hm=legHome(t,t.legs.length),aw=hm===t.a?t.b:t.a,hf=FMT.wc?hostF(hm,aw):rd.legs===1?0:1;let[h,a]=simThrows(sampleThrows(),hm,aw,hf),et=false;
+  if(t.legs.length===rd.legs-1){const c={...t,legs:t.legs.slice()};addLeg(c,h,a);if(!resolve(c,rd)){const[eh,ea]=simThrows(sampleMins(91,120).length,hm,aw,hf);h+=eh;a+=ea;et=true}}
+  addLeg(t,h,a);if(t.legs.length===rd.legs){if(!resolve(t,rd))simShootout(t);else if(et&&!t.how)t.how='extra time'}}
 function drawR16(){
   const W=[],R=[];S.groups.forEach((g,gi)=>{const t=table(gi);W.push(t[0].id);R.push(t[1].id)});
   for(let k=0;k<5000;k++){const rs=shuffle(R.map((id,gi)=>({id,gi})));const strict=k<4000;
@@ -434,7 +438,7 @@ const A={
   skipDraw(){if(S.auto){clearInterval(S.auto);S.auto=null}S.drawn=FMT.G*4;sfx('mine');render()},
   drawDone(){if(S.auto){clearInterval(S.auto);S.auto=null}S.phase='groups';render()},
   mute(){MUTED=!MUTED;try{localStorage.setItem('rps-muted',MUTED?'1':'0')}catch(e){}document.getElementById('snd').textContent=MUTED?'Sound off':'Sound on'},
-  playMd(){const f=fixtures(S.md).find(f=>f.h===S.me||f.a===S.me);const n=sampleThrows();S.live={type:'group',fx:f,home:f.h,away:f.a,max:n,mins:kickMinutes(n),throws:[],hg:0,ag:0};S.phase='match';render()},
+  playMd(){const f=fixtures(S.md).find(f=>f.h===S.me||f.a===S.me);const mins=sampleMins();S.live={type:'group',fx:f,home:f.h,away:f.a,max:mins.length,mins,ft:!mins.length,throws:[],hg:0,ag:0};S.phase='match';render()},
   pick(c){
     const L=S.live;if(!L||L.done||L.busy||waiting(L))return;L.busy=true;L.myPick=c;L.last=null;sfx('throw');render();
     setTimeout(()=>{
@@ -462,6 +466,7 @@ const A={
   kickoff(){const L=S.live;if(!L||L.started)return;L.form=FORM.split('-').map(Number);L.oform=FORMS[Math.random()*FORMS.length|0].split('-').map(Number);L.started=true;render()},
   setFmt(k){FMT=FMTS[k]||FMTS.ucl;try{localStorage.setItem('rps-fmt',FMT.key)}catch(e){}newGame()},
   addClub(id){id=+id;if(!S.active.has(id)){const c=T[id].country,same=a=>TOP5.has(c)?T[a].country===c:!TOP5.has(T[a].country);let low=null;for(const a of S.active){if(a===S.me||!same(a))continue;if(low==null||T[a].pi<T[low].pi)low=a}S.active.delete(low);S.active.add(id);assignPots(S.active)}S.me=id;render()},
+  toggleAG(){AWAY=!AWAY;try{localStorage.setItem('rps-ag',AWAY?'1':'0')}catch(e){}render()},
   setMode(m){MODE=m;try{localStorage.setItem('rps-mode',m)}catch(e){}render()},
   cont(){
     const L=S.live;
@@ -483,8 +488,8 @@ const A={
   playLeg(){
     const rd=curRound(),t=myTie();
     if(!t){curTies().filter(t=>t.legs.length===S.ko.leg).forEach(t=>simLeg(t,rd));S.phase='koResults';render();return}
-    const home=legHome(t,S.ko.leg),away=home===t.a?t.b:t.a,n=sampleThrows();
-    S.live={type:'ko',tie:t,home,away,max:n,mins:kickMinutes(n),throws:[],hg:0,ag:0,so:false,neutral:rd.legs===1,soThrows:[]};S.phase='match';render();
+    const home=legHome(t,S.ko.leg),away=home===t.a?t.b:t.a,mins=sampleMins();
+    S.live={type:'ko',tie:t,home,away,max:mins.length,mins,ft:!mins.length,throws:[],hg:0,ag:0,so:false,neutral:rd.legs===1,soThrows:[]};S.phase='match';render();
   },
   nextKo(){
     const rd=curRound();
@@ -503,8 +508,11 @@ const A={
 };
 function finishRegular(){
   const L=S.live;if(L.type==='group'){L.done=true;return}
-  const rd=curRound();addLeg(L.tie,L.hg,L.ag);
-  if(L.tie.legs.length===rd.legs&&!resolve(L.tie,rd)){L.so=true;return}
+  const rd=curRound(),t=L.tie;
+  if(MODE!=='foos'&&!L.et&&t.legs.length===rd.legs-1){const c={...t,legs:t.legs.slice()};addLeg(c,L.hg,L.ag);
+    if(!resolve(c,rd)){L.et=true;const em=sampleMins(91,120);L.mins=L.mins.concat(em);L.max=L.throws.length+em.length;L.ft=!em.length;return}}
+  addLeg(t,L.hg,L.ag);
+  if(t.legs.length===rd.legs){if(!resolve(t,rd)){L.so=true;return}if(L.et&&!t.how)t.how='extra time'}
   L.done=true;
 }
 
@@ -618,13 +626,13 @@ function venueTxt(L){if(L.type==='playoff')return '';
   return (UCL_T[L.home]||{}).st||''}
 const waiting=L=>!!L&&!L.so&&!L.done&&L.type!=='playoff'&&MODE!=='foos'&&!!L.mins&&(L.ft||(L.tmin||0)<L.mins[L.throws.length]);
 const clockTxt=L=>L.done||L.so?'Full time':(L.tmin||0)>0?Math.floor(L.tmin)+"'":'Kick-off';
-const tlHtml=L=>`<div class="tl"><i id="tlf" style="width:${(L.so||L.done?90:(L.tmin||0))/90*100}%"></i>${(L.mins?L.throws.map((t,i)=>`<b class="${t.r>0?'w':t.r<0?'l':''}" style="left:${L.mins[i]/90*100}%"></b>`).join(''):'')}</div>`;
+const tlHtml=L=>{const D=L.et?120:90;return `<div class="tl"><i id="tlf" style="width:${(L.so||L.done?D:(L.tmin||0))/D*100}%"></i>${(L.mins?L.throws.map((t,i)=>`<b class="${t.r>0?'w':t.r<0?'l':''}" style="left:${L.mins[i]/D*100}%"></b>`).join(''):'')}</div>`};
 function tlAttach(){const L=S.live;if(S.phase!=='match'||!L||L.run||L.busy||!waiting(L))return;
   L.run=true;if(!L.tmin)sfx('whistle');let last=performance.now();
   const step=ts=>{if(S.live!==L||S.phase!=='match'){L.run=false;return}
-    const dt=Math.max(0,Math.min(100,ts-last));last=ts;const target=L.ft?90:L.mins[L.throws.length];
+    const dt=Math.max(0,Math.min(100,ts-last));last=ts;const target=L.ft?(L.et?120:90):L.mins[L.throws.length];
     L.tmin=Math.min(target,(L.tmin||0)+dt*.005);
-    const f=document.getElementById('tlf'),c=document.getElementById('tlc');if(f)f.style.width=L.tmin/90*100+'%';if(c)c.textContent=Math.floor(L.tmin)+"'";
+    const f=document.getElementById('tlf'),c=document.getElementById('tlc');if(f)f.style.width=L.tmin/(L.et?120:90)*100+'%';if(c)c.textContent=Math.floor(L.tmin)+"'";
     if(L.tmin>=target){L.run=false;if(L.ft){finishRegular();sfx('whistle')}render();return}
     requestAnimationFrame(step)};
   requestAnimationFrame(step)}
@@ -650,7 +658,7 @@ function bracket(){
   const Rd=FMT.rounds,R=S.ko.rounds;let L=-1;Rd.forEach((_,i)=>{if(R[i])L=i});
   const ord=[];
   if(L>=0){ord[L]=R[L].slice();for(let r=L-1;r>=0;r--){const left=R[r].slice(),o=[];for(const t of ord[r+1])for(const id of[t.a,t.b]){const k=left.findIndex(x=>x.winner===id);if(k>=0)o.push(left.splice(k,1)[0])}ord[r]=o.concat(left)}}
-  const box=t=>{const ln=(id,g)=>`<div class="btl ${t.winner===id?'w':''} ${id===S.me?'me':''}">${fl(id)}<b>${$(id).code}</b>${t.winner===id&&t.how?`<i class="hw">${t.how==='shootout'?'SO':'AG'}</i>`:''}<span>${t.legs.length?g:''}</span></div>`;return `<div class="bt ${t.a===S.me||t.b===S.me?'mine':''}">${ln(t.a,t.ga)}${ln(t.b,t.gb)}</div>`};
+  const box=t=>{const ln=(id,g)=>`<div class="btl ${t.winner===id?'w':''} ${id===S.me?'me':''}">${fl(id)}<b>${$(id).code}</b>${t.winner===id&&t.how?`<i class="hw">${({shootout:'SO','away goals':'AG','extra time':'AET'}[t.how]||'')}</i>`:''}<span>${t.legs.length?g:''}</span></div>`;return `<div class="bt ${t.a===S.me||t.b===S.me?'mine':''}">${ln(t.a,t.ga)}${ln(t.b,t.gb)}</div>`};
   return `<div class="bk">${Rd.map((rd,r)=>{const n=2**(Rd.length-1-r),ties=ord[r]||[],it=Array.from({length:n},(_,i)=>ties[i]?box(ties[i]):'<div class="bt tbd">TBD</div>');
     let body='';if(n===1)body=`<div class="bk-pair last"><div class="bk-slot">${it[0]}</div></div>`;
     else for(let i=0;i<n;i+=2){const me=[ties[i],ties[i+1]].some(t=>t&&t.winner===S.me);body+=`<div class="bk-pair ${me?'me':''}"><div class="bk-slot">${it[i]}</div><div class="bk-slot">${it[i+1]}</div></div>`}
@@ -670,7 +678,7 @@ function season(){
     if(m){const my=home?m.hg:m.ag,op=home?m.ag:m.hg;it.res=my>op?'W':my<op?'L':'D';it.sc=`${my}–${op}`}else if(md===S.md)it.next=1;items.push(it)}
   FMT.rounds.forEach((rd,i)=>{const ties=S.ko.rounds[i];if(!ties)return;const t=ties.find(t=>t.a===S.me||t.b===S.me);if(!t)return;const opp=t.a===S.me?t.b:t.a;
     for(let l=0;l<rd.legs;l++){const leg=t.legs[l],home=legHome(t,l)===S.me,it={lab:rd.legs===2?`${rd.short} L${l+1}`:rd.short==='F'?'Final':rd.short,ha:rd.legs===1?'Neutral':home?'Home':'Away',opp};
-      if(leg){const my=home?leg.hg:leg.ag,op=home?leg.ag:leg.hg;it.res=my>op?'W':my<op?'L':'D';it.sc=`${my}–${op}`;if(l===rd.legs-1&&t.how)it.sc+=t.how==='shootout'?' (SO)':' (AG)';items.push(it)}
+      if(leg){const my=home?leg.hg:leg.ag,op=home?leg.ag:leg.hg;it.res=my>op?'W':my<op?'L':'D';it.sc=`${my}–${op}`;if(l===rd.legs-1&&t.how)it.sc+=({shootout:' (SO)','away goals':' (AG)','extra time':' (AET)'}[t.how]||'');items.push(it)}
       else if(!S.out&&t.winner==null&&l===t.legs.length){it.next=1;items.push(it)}}});
   return `<div class="eyebrow">Your season</div><div class="season">${items.map(it=>`<div class="sm ${it.res?'r'+it.res:''} ${it.next?'next':''} ${!it.res&&!it.next?'fut':''}"><div class="sm-t"><span>${it.lab}</span><span>${it.ha}</span></div><div class="sm-o">${fl(it.opp)}<b>${$(it.opp).code}</b></div><div class="sm-r">${it.res?`<i>${it.res}</i>${it.sc}`:it.next?'Next':'—'}</div></div>`).join('')}</div>`;
 }
@@ -680,7 +688,7 @@ const V={
   pick(){
     return `<div class="fade"><div class="eyebrow">${FMT.title}</div><h1>Choose your <em>${FMT.unit}.</em></h1>
     <div class="modes" style="margin-right:10px">${Object.values(FMTS).map(f=>`<button class="mode ${FMT.key===f.key?'on':''}" data-act="setFmt" data-arg="${f.key}">${f.short}</button>`).join('')}</div>
-    <div class="modes"><button class="mode ${MODE==='rps'?'on':''}" data-act="setMode" data-arg="rps">Rock Paper Scissors</button><button class="mode ${MODE==='pen'?'on':''}" data-act="setMode" data-arg="pen">Penalties</button><button class="mode ${MODE==='foos'?'on':''}" data-act="setMode" data-arg="foos">Table football</button></div>
+    <div class="modes"><button class="mode ${MODE==='rps'?'on':''}" data-act="setMode" data-arg="rps">Rock Paper Scissors</button><button class="mode ${MODE==='pen'?'on':''}" data-act="setMode" data-arg="pen">Penalties</button><button class="mode ${MODE==='foos'?'on':''}" data-act="setMode" data-arg="foos">Table football</button></div>${FMT.key==='ucl'?`<div class="modes" style="margin-left:10px"><button class="mode ${AWAY?'on':''}" data-act="toggleAG">Away goals ${AWAY?'on':'off'}</button></div>`:''}
     <p class="lead">${FMT.lead} Every match is decided by ${MODE==='pen'?'penalties: you shoot, then you keep, one kick at a time':MODE==='foos'?'table football: real-time, 75 seconds a match, level knockouts go to penalties':'rock, paper, scissors'}.${FMT.key==='ucl'?' Each season 32 of 100 European clubs qualify, weighted by pedigree, and pots follow strength.':' The draw follows FIFA rules: hosts pre-placed, at most two UEFA teams per group, other confederations kept apart.'}</p>
     <div class="srch"><input id="q" class="search" placeholder="Search your ${FMT.unit}…" autocomplete="off" value="${(S.q||'').replace(/"/g,'&quot;')}">${FMT.key==='ucl'?'<button class="ghost" data-act="newGame">Reroll the 32</button>':''}</div><div id="qres" class="qres"></div><div class="pots">${[0,1,2,3].map(p=>`<div class="pot"><div class="eyebrow">Pot ${p+1}</div>${potTeams(p).map(t=>`<button class="club ${S.me===t.id?'sel':''}" data-act="sel" data-arg="${t.id}" data-n="${t.name.toLowerCase()}"><b class="code">${t.code}</b><span>${fl(t.id)} ${t.name}</span></button>`).join('')}</div>`).join('')}</div>
     <button class="cta" data-act="draw" data-primary ${S.me==null?'disabled':''}>Draw the groups →</button></div>`;
@@ -706,8 +714,9 @@ const V={
       const t=L.tie;
       if(rd.legs===2&&S.ko.leg===1){const cur=L.tie.legs.length===2?[0,0]:(L.home===t.a?[L.hg,L.ag]:[L.ag,L.hg]);const ga=t.ga+cur[0],gb=t.gb+cur[1];const mg=t.a===S.me?ga:gb,og=t.a===S.me?gb:ga;sub=`Aggregate <b>${$(S.me).code} ${mg} – ${og} ${$(opp).code}</b>`}
       else if(rd.legs===2&&!L.done)sub=`Each throw you win is a goal · the whistle can go any time`;
-      else if(!L.done&&!L.so)sub=`Each throw you win is a goal · level at full time goes to a shootout`;
-      if(L.so&&!L.done)sub=`Level${rd.legs===2?' on aggregate and away goals':''} · <b>Shootout — sudden death</b>`;
+      else if(!L.done&&!L.so)sub=`Each throw you win is a goal · level at full time goes to extra time`;
+      if(L.et&&!L.so&&!L.done)sub=`Level after 90 minutes · <b>Extra time</b>`;
+      if(L.so&&!L.done)sub=`Level${rd.legs===2?(AWAY?' on aggregate and away goals':' on aggregate'):''} after extra time · <b>Shootout — sudden death</b>`;
     }
     {const vn=venueTxt(L);if(vn)ctx+=' · '+vn}
     const all=L.throws.concat(L.soThrows||[]);
@@ -715,7 +724,7 @@ const V={
     const dots=Array.from({length:total},(_,i)=>{const t=all[i];return `<i class="${t?(t.r>0?'w':t.r<0?'l':'d'):(i===all.length&&!L.done?'now':'')}"></i>`}).join('');
     const side=(id,home)=>`<div class="side ${id===S.me?'me':''}"><div class="tag">${FMT.wc||L.type==='playoff'||(L.type==='ko'&&curRound().legs===1)?(id===S.me?'You':'Opponent'):home?'Home':'Away'}</div><div class="code">${$(id).code}</div><div class="nm">${fl(id)} ${$(id).name}</div></div>`;
     if(MODE==='foos'&&!L.so&&!L.done&&!L.started)return `<div class="match fade"><div class="eyebrow">${ctx}</div><div class="board">${side(L.home,true)}<div class="score">${L.hg}<span>–</span>${L.ag}</div>${side(L.away,false)}</div>${sub.includes('Aggregate')?`<div class="sub">${sub}</div>`:''}<div class="pmode" style="margin-top:26px">Choose your formation · defence – midfield – attack</div><div class="forms">${FORMS.map(f=>`<button class="form ${f===FORM?'on':''}" data-act="setForm" data-arg="${f}">${formSvg(f)}<span>${f}</span></button>`).join('')}</div>${rspdHtml('margin:0 auto 26px')}<button class="cta" data-act="kickoff" data-primary>Kick off with ${FORM} →</button></div>`;
-    if(MODE==='foos'&&!L.so&&!L.done)return `<div class="match fade"><div class="eyebrow">${ctx}</div><div class="board">${side(L.home,true)}<div class="score" id="fzs">${L.hg}<span>–</span>${L.ag}</div>${side(L.away,false)}</div><div class="clock" id="fzc">0'</div><div class="sub">${sub.replace(/Each throw you win is a goal · the whistle can go any time/,'Table football · 90 minutes in 75 seconds').replace(/Each throw you win is a goal · level at full time goes to a shootout/,'Table football · level at full time goes to penalties')}</div><canvas id="fz" class="fz"></canvas><div class="fzhint">Move: mouse or ↑ ↓ · Kick: click or Space · Your rods in lime, attacking → · You ${L.form.join('-')} vs ${$(opp).code} ${L.oform.join('-')}</div>${rspdHtml()}</div>`;
+    if(MODE==='foos'&&!L.so&&!L.done)return `<div class="match fade"><div class="eyebrow">${ctx}</div><div class="board">${side(L.home,true)}<div class="score" id="fzs">${L.hg}<span>–</span>${L.ag}</div>${side(L.away,false)}</div><div class="clock" id="fzc">0'</div><div class="sub">${sub.replace(/Each throw you win is a goal · the whistle can go any time/,'Table football · 90 minutes in 75 seconds').replace(/Each throw you win is a goal · level at full time goes to extra time/,'Table football · level at full time goes to penalties')}</div><canvas id="fz" class="fz"></canvas><div class="fzhint">Move: mouse or ↑ ↓ · Kick: click or Space · Your rods in lime, attacking → · You ${L.form.join('-')} vs ${$(opp).code} ${L.oform.join('-')}</div>${rspdHtml()}</div>`;
     let reveal;
     if(L.busy)reveal=`<div class="hand mine"><div class="ic pop">${ICON[L.myPick]}</div>You</div><div class="res"><span class="wait" style="display:inline-block"></span></div><div class="hand"><div class="ic"><span class="wait"></span></div>${$(opp).code}</div>`;
     else if(L.last){const r=L.last.r;reveal=`<div class="hand mine"><div class="ic pop">${ICON[L.last.me]}</div>You · ${L.last.me}</div><div class="res ${r>0?'w':r<0?'l':''}">${r>0?'Win':r<0?'Loss':'Draw'}</div><div class="hand"><div class="ic pop">${ICON[L.last.op]}</div>${$(opp).code} · ${L.last.op}</div>`}
@@ -747,7 +756,7 @@ const V={
   koDraw(){
     const rd=curRound(),t=myTie();
     const btn=rd.legs===2?'Play 1st leg →':rd.short==='F'?'Play the final →':'Play the match →';
-    return `<div class="fade"><div class="bar-top"><div><div class="eyebrow">The draw</div><h1>${rd.name.replace(/(\S+)$/,'<em>$1</em>')}</h1><p class="lead">${rd.legs===2?`Two legs. Each match lasts a random number of throws (about 4–5, up to 12) and you never know when the whistle goes. Every throw won is a goal. Level on aggregate: away goals, then a sudden-death shootout.`:`One match of a random length (about 4–5 throws, up to 12). Every throw won is a goal. Level at full time: sudden-death shootout.`}</p></div><button class="cta" data-act="playLeg" data-primary>${btn}</button></div>
+    return `<div class="fade"><div class="bar-top"><div><div class="eyebrow">The draw</div><h1>${rd.name.replace(/(\S+)$/,'<em>$1</em>')}</h1><p class="lead">${rd.legs===2?`Two legs. Each match lasts a random number of throws (each minute has a 1-in-18 chance of a throw, about 5 per match) and you never know when the whistle goes. Every throw won is a goal. Level on aggregate: ${AWAY?'away goals, then ':''}30 minutes of extra time, then a sudden-death shootout.`:`One match of a random length (each minute has a 1-in-18 chance of a throw, about 5 per match). Every throw won is a goal. Level at full time: 30 minutes of extra time, then a sudden-death shootout.`}</p></div><button class="cta" data-act="playLeg" data-primary>${btn}</button></div>
     ${season()}<div class="ties">${curTies().map(t=>tieRow(t,rd)).join('')}</div><div class="eyebrow">Bracket</div>${bracket()}</div>`;
   },
   koResults(){
